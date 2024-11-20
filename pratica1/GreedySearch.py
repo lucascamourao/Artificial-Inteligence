@@ -11,6 +11,7 @@ OBS: A* search always finds the best path because, even after finding a good pat
 Links: 
 https://www.youtube.com/watch?v=HMAHrQHmrUQ
 https://www.youtube.com/watch?v=iTJvWfmp1vw
+https://github.com/hassanzadehmahdi/Romanian-problem-using-Astar-and-GBFS/blob/main/README.md
 """
 
 import queue
@@ -22,9 +23,33 @@ class Graph:
         self.graph = {}
 
     def add_edge(self, node1, node2, weight):
-        if node1 not in self.graph:  # Check if the node is already added
-            self.graph[node1] = {}  # If not, create the node
-        self.graph[node1][node2] = weight  # Else, add a connection to its neighbor
+        # they both are not in the graph
+        if (node1 not in self.graph) and (node2 not in self.graph):
+            self.graph[node1] = [[node2, weight]]
+            self.graph[node2] = [[node1, weight]]
+
+        elif node1 not in self.graph:
+            self.graph[node1] = [[node2, weight]]
+
+            connections = self.graph.get(node2)
+            connections.append([node1, weight])
+            self.graph.update({node2: connections})
+
+        elif node2 not in self.graph:
+            self.graph[node2] = [[node1, weight]]
+
+            connections = self.graph.get(node1)
+            connections.append([node2, weight])
+            self.graph.update({node1: connections})
+
+        else:
+            connections = self.graph.get(node1)
+            connections.append([node2, weight])
+            self.graph.update({node1: connections})
+
+            connections = self.graph.get(node2)
+            connections.append([node1, weight])
+            self.graph.update({node2: connections})
 
 
 # Getting heuristics
@@ -65,6 +90,7 @@ def getCity():
 
 
 # Creating the map (graph) of the city
+# INCOMPLETO
 def createGraph():
     graph = Graph()
     with open("citiesGraph.txt") as cg:
