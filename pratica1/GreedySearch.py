@@ -15,7 +15,8 @@ https://github.com/hassanzadehmahdi/Romanian-problem-using-Astar-and-GBFS/blob/m
 """
 
 import queue
-import matplotlib.pyplot as plt
+
+# import matplotlib.pyplot as plt
 
 
 class Graph:
@@ -90,28 +91,78 @@ def getCity():
 
 
 # Creating the map (graph) of the city
-# INCOMPLETO
 def createGraph():
     graph = Graph()
     with open("citiesGraph.txt") as cg:
         for line in cg:
             city1, city2, cost = line.strip().split(" ")
             graph.add_edge(city1, city2, int(cost))
-
-    if graph == {}:
-        print("Error! Empty file?")
-
     return graph
 
 
 # Greedy Best First Search Algorithm
 def GBFS(startNode, heuristics, graph, goalNode="Bucharest"):
-    return
+    priorityQueue = queue.PriorityQueue()
+    priorityQueue.put((heuristics[startNode], startNode))
+
+    path = []
+    visited = set()
+
+    while not priorityQueue.empty():
+        current = priorityQueue.get()[1]
+        if current in visited:
+            continue
+
+        path.append(current)
+        visited.add(current)
+
+        if current == goalNode:
+            break
+
+        for neighbor, _ in graph.graph.get(current, []):
+            if neighbor not in visited:
+                priorityQueue.put((heuristics[neighbor], neighbor))
+
+    return path
 
 
-# Astar Algorithm
+# A* Search Algorithm
 def Astar(startNode, heuristics, graph, goalNode="Bucharest"):
-    return
+    priorityQueue = queue.PriorityQueue()
+    priorityQueue.put(
+        (heuristics[startNode], (startNode, 0))
+    )  # (f(n), (current, g(n)))
+
+    came_from = {}  # Para rastrear o caminho
+    g_costs = {startNode: 0}  # Custos mínimos conhecidos
+    visited = set()
+
+    while not priorityQueue.empty():
+        _, (current, g_cost) = priorityQueue.get()
+
+        if current in visited:
+            continue
+        visited.add(current)
+
+        if current == goalNode:
+            break
+
+        for neighbor, cost in graph.graph.get(current, []):
+            new_g_cost = g_cost + cost
+            if neighbor not in g_costs or new_g_cost < g_costs[neighbor]:
+                g_costs[neighbor] = new_g_cost
+                f_cost = new_g_cost + heuristics[neighbor]
+                priorityQueue.put((f_cost, (neighbor, new_g_cost)))
+                came_from[neighbor] = current
+
+    # Reconstruindo o caminho
+    path = []
+    current = goalNode
+    while current in came_from or current == startNode:
+        path.insert(0, current)
+        current = came_from.get(current)
+
+    return path
 
 
 def main():
