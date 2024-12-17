@@ -26,11 +26,12 @@ Thus, the probability P of moving from city i to city j is
 P = DESIRE/ S
 """
 
-ALPHA = BETHA = 1  # definied empirically
+ALPHA = 1  # definied empirically
+BETHA = 2  # definied empirically
 NUM_CITIES = 15
-MAX_ITERATIONS = 300
+MAX_ITERATIONS = 1000
 Q = 100  # constant for pheromone formula
-p = 0.1  # coeficient of evaporation
+p = 0.5  # coeficient of evaporation
 
 ANT_PATHS = []  # choose how many ants (iterations)
 # ([path], cost) tuple
@@ -56,31 +57,25 @@ DISTANCE_MATRIX = [
 
 # amount of pheromone between i-city and j-city
 # Initialized with 0s
-pheromone_matrix = np.full((15, 15), 0.2, dtype=float)
+pheromone_matrix = np.full((NUM_CITIES, NUM_CITIES), 1.0, dtype=float)
 
 
 # List of probability of a city 'start' to go to all other cities
 # The nodes are integers and we use cost matrices
-def probability_to_go(start, pheromone_matrix, DISTANCE_MATRIX):
+def probability_to_go(start, allowed, pheromone_matrix, DISTANCE_MATRIX):
     total_desires = 0.0
     list_probability = []  # list of probabilities by city
 
-    # One of the 'city' is going to be the 'desired', in position [desired]
-    for city in range(NUM_CITIES):
-        if city == start:
-            list_probability.append(0)
-            continue
-
+    for city in allowed:
         pij = (pheromone_matrix[start][city]) ** ALPHA
-        cij = (DISTANCE_MATRIX[start][city]) ** BETHA
-        desire_ij = pij * cij
+        cij = (1 / DISTANCE_MATRIX[start][city]) ** BETHA
+        desire = pij * cij
+        list_probability.append(desire)
+        total_desires += desire
 
-        total_desires += desire_ij
-
-        list_probability.append(desire_ij)  # Add the desire of a city on the list
-
-    # Dividing all the element (the desires) by the total to find the probability
-    list_probability = [element / total_desires for element in list_probability]
+    if total_desires > 0:
+        # Dividing all the element (the desires) by the total to find the probability
+        list_probability = [p / total_desires for p in list_probability]
 
     return list_probability
 
@@ -99,10 +94,12 @@ def probability_to_go(start, pheromone_matrix, DISTANCE_MATRIX):
 
 
 # Update the pheromone matrix
-def update_pheromone(i, j, pheromone_matrix, lengh_curr_route):
-    p_addition = Q / lengh_curr_route
-
-    pheromone_matrix[i][j] += p_addition
+def update_pheromone(path, pheromone_matrix, length_route):
+    for i in range(len(path) - 1):
+        i_city = path[i]
+        j_city = path[i + 1]
+        pheromone_matrix[i_city][j_city] += Q / length_route
+        pheromone_matrix[j_city][i_city] += Q / length_route  # simetric
 
 
 def update_evaporation_pheromone(pheromone_matrix):
@@ -111,6 +108,7 @@ def update_evaporation_pheromone(pheromone_matrix):
 
 
 # Colony of Ants Optimization Algorithm ========================================================================
+"""
 def ant_colony_optimization(MAX_ITERATIONS):
     best_path = []
     best_cost = float("inf")
@@ -153,9 +151,69 @@ def ant_colony_optimization(MAX_ITERATIONS):
             best_path = path
 
     return best_path, best_cost
+"""
 
 
-# Main
-best_path, best_cost = ant_colony_optimization(MAX_ITERATIONS)
-print(f"Best Path: {best_path}")
-print(f"Best Cost: {best_cost}")
+def ant_colony_optimization(MAX_ITERATIONS):
+    best_path = []
+    best_cost = float("inf")
+    best_cost_history = []
+
+    for _ in range(MAX_ITERATIONS):
+        current_path = []  # Track the ant's path
+        total_length = 0
+        current_city = random.randint(
+            0, NUM_CITIES - 1
+        )  # Começar de uma cidade aleatória
+        visited = {current_city}
+        current_path.append(current_city)
+
+        while len(visited) < NUM_CITIES:
+            # Get probabilities for the current city
+            allowed_cities = set(range(NUM_CITIES)) - visited  # not visited cities
+            probabilities = probability_to_go(
+                current_city,
+                allowed_cities,
+                pheromone_matrix,
+                DISTANCE_MATRIX,
+            )
+
+            # Select the next city based on the probabilities
+            next_city = np.random.choice(list(allowed_cities), p=probabilities)
+
+            visited.add(next_city)
+            total_length += DISTANCE_MATRIX[current_city][next_city]
+            current_path.append(next_city)
+            current_city = next_city
+
+        # Adding the cost of going back to the starting city
+        total_length += DISTANCE_MATRIX[current_city][current_path[0]]
+        current_path.append(current_path[0])
+
+        # Verify if it's the best route
+        if total_length < best_cost:
+            best_cost = total_length
+            best_path = current_path
+
+        update_pheromone(current_path, pheromone_matrix, total_length)
+        update_evaporation_pheromone(pheromone_matrix)
+
+        best_cost_history.append(
+            best_cost
+        )  # Save the history of best cost, for plotting
+
+    return best_path, best_cost, best_cost_history
+
+
+best_path, best_cost, best_cost_history = ant_colony_optimization(MAX_ITERATIONS)
+
+# Results
+print(f"Best Route: {best_path}")
+print(f"Total Cost: {best_cost}")
+
+# Visualize evolution of cost
+plt.plot(best_cost_history)
+plt.title("Evolution of Cost - Ant Colony")
+plt.xlabel("Iterations")
+plt.ylabel("Cost")
+plt.show()
