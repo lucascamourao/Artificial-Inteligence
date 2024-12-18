@@ -2,9 +2,8 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Parâmetros do problema
-num_cidades = 15  # número de cidades
-cost_matrix = [
+NUM_CITIES = 15
+DISTANCE_MATRIX = [
     [0, 10, 15, 45, 5, 45, 50, 44, 30, 100, 67, 33, 90, 17, 50],
     [15, 0, 100, 30, 20, 25, 80, 45, 41, 5, 45, 10, 90, 10, 35],
     [40, 80, 0, 90, 70, 33, 100, 70, 30, 23, 80, 60, 47, 33, 25],
@@ -20,122 +19,87 @@ cost_matrix = [
     [80, 10, 90, 33, 70, 35, 45, 30, 40, 80, 45, 30, 0, 50, 20],
     [33, 90, 40, 18, 15, 50, 25, 90, 44, 43, 70, 5, 50, 0, 25],
     [25, 70, 45, 50, 5, 45, 20, 100, 25, 50, 35, 10, 90, 5, 0],
-]  # tabela de distâncias entre as cidades
+]
 
-# Parâmetros do algoritmo genético
-tamanho_populacao = 10
-num_geracoes = 100
-taxa_mutacao = 0.2
-taxa_crossover = 0.8
-
-
-# Função para calcular o comprimento de um caminho
-def calcular_distancia(caminho):
-    distancia_total = 0
-    for i in range(len(caminho) - 1):
-        distancia_total += cost_matrix[caminho[i]][caminho[i + 1]]
-    distancia_total += cost_matrix[caminho[-1]][caminho[0]]  # Retorna à cidade inicial
-    return distancia_total
+population_size = 50
+num_generations = 2000
+mutation_rate = 0.1
+crossover_rate = 0.9
+elitism_size = 2
 
 
-# Função para gerar uma população inicial
-def gerar_populacao_inicial():
-    populacao = []
-    for _ in range(tamanho_populacao):
-        caminho = list(range(num_cidades))
-        random.shuffle(caminho)
-        populacao.append(caminho)
-    return populacao
+def calculate_distance(path):
+    return sum(DISTANCE_MATRIX[path[i]][path[i + 1]] for i in range(-1, NUM_CITIES - 1))
 
 
-# Função para selecionar os melhores indivíduos (caminhos)
-def selecionar(populacao):
-    aptidoes = [1 / calcular_distancia(caminho) for caminho in populacao]
-    soma_aptidoes = sum(aptidoes)
-    probabilidades = [aptidao / soma_aptidoes for aptidao in aptidoes]
-
-    # Seleção por roleta
-    selecionados = random.choices(populacao, probabilidades, k=tamanho_populacao)
-    return selecionados
+def generate_initial_population():
+    return [
+        random.sample(range(NUM_CITIES), NUM_CITIES) for _ in range(population_size)
+    ]
 
 
-# Função de cruzamento (crossover)
-def crossover(pai, mae):
-    if random.random() > taxa_crossover:
-        return pai[:]
-
-    ponto_inicial = random.randint(0, num_cidades - 1)
-    ponto_final = random.randint(ponto_inicial + 1, num_cidades)
-
-    filho = [None] * num_cidades
-    filho[ponto_inicial:ponto_final] = pai[ponto_inicial:ponto_final]
-
-    indice_mae = 0
-    for i in range(num_cidades):
-        if filho[i] is None:
-            while mae[indice_mae] in filho:
-                indice_mae += 1
-            filho[i] = mae[indice_mae]
-
-    return filho
+def tournament_selection(population, k=5):
+    selected = random.sample(population, k)
+    return min(selected, key=calculate_distance)
 
 
-# Função de mutação
-def mutacao(caminho):
-    if random.random() > taxa_mutacao:
-        return caminho
+def pmx_crossover(parent1, parent2):
+    size = len(parent1)
+    cx1, cx2 = sorted(random.sample(range(size), 2))
+    child = [-1] * size
+    child[cx1:cx2] = parent1[cx1:cx2]
 
-    i, j = random.sample(range(num_cidades), 2)
-    caminho[i], caminho[j] = caminho[j], caminho[i]
-    return caminho
+    for i in range(cx1, cx2):
+        if parent2[i] not in child:
+            pos = i
+            while child[pos] != -1:
+                pos = parent2.index(parent1[pos])
+            child[pos] = parent2[i]
 
+    for i in range(size):
+        if child[i] == -1:
+            child[i] = parent2[i]
 
-# Função principal do algoritmo genético
-def algoritmo_genetico():
-    populacao = gerar_populacao_inicial()
-    melhores_caminhos = []
-    melhores_distancias = []
-
-    for geracao in range(num_geracoes):
-        # Seleção
-        selecionados = selecionar(populacao)
-
-        # Cruzamento (crossover)
-        nova_populacao = []
-        for i in range(0, len(selecionados), 2):
-            pai = selecionados[i]
-            mae = selecionados[i + 1] if i + 1 < len(selecionados) else selecionados[0]
-            filho = crossover(pai, mae)
-            nova_populacao.append(filho)
-
-        # Mutação
-        nova_populacao = [mutacao(caminho) for caminho in nova_populacao]
-
-        # Avaliar e atualizar a população
-        populacao = nova_populacao
-        distancias_caminhos = [calcular_distancia(caminho) for caminho in populacao]
-        melhor_distancia_geracao = min(distancias_caminhos)
-        melhor_caminho_geracao = populacao[np.argmin(distancias_caminhos)]
-
-        melhores_caminhos.append(melhor_caminho_geracao)
-        melhores_distancias.append(melhor_distancia_geracao)
-
-    return melhores_caminhos, melhores_distancias
+    return child
 
 
-# Executando o algoritmo genético
-melhores_caminhos, melhores_distancias = algoritmo_genetico()
+def mutate(path):
+    if random.random() < mutation_rate:
+        i, j = random.sample(range(len(path)), 2)
+        path[i], path[j] = path[j], path[i]
+    return path
 
-# Exibindo o melhor caminho encontrado e a distância
-melhor_caminho = melhores_caminhos[-1]
-melhor_distancia = melhores_distancias[-1]
 
-print(f"Melhor caminho encontrado: {melhor_caminho}")
-print(f"Distância total: {melhor_distancia}")
+def genetic_algorithm():
+    population = generate_initial_population()
+    best_distances = []
 
-# Plotando a evolução das distâncias ao longo das gerações
-plt.plot(melhores_distancias)
-plt.title("Evolução da distância ao longo das gerações")
-plt.xlabel("Geração")
-plt.ylabel("Distância total do caminho")
+    for generation in range(num_generations):
+        new_population = sorted(population, key=calculate_distance)[:elitism_size]
+
+        while len(new_population) < population_size:
+            parent1 = tournament_selection(population)
+            parent2 = tournament_selection(population)
+            if random.random() < crossover_rate:
+                child = pmx_crossover(parent1, parent2)
+            else:
+                child = parent1[:]
+            child = mutate(child)
+            new_population.append(child)
+
+        population = new_population
+        best_distances.append(calculate_distance(population[0]))
+
+    return population[0], best_distances
+
+
+best_path, best_distances = genetic_algorithm()
+print(f"Best Route: {best_path}")
+print(f"Total Cost: {best_distances[-1]}")
+
+# Plota a evolução das distâncias
+plt.plot(best_distances)
+plt.title("Evolution of Cost - Genetic")
+plt.xlabel("Generation")
+plt.ylabel("Cost")
 plt.show()

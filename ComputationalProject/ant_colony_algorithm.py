@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 """
 DEFINING THE PROBLEM ======================================================================
 
+
 pij = amount of pheromone between i-city and j-city
 cost matrix 'pheromone_matrix'
 ex: pheromone_matrix[i][j]
@@ -13,11 +14,11 @@ cij = distance between i-city and j-city
 cost matrix 'DISTANCE_MATRIX'
 ex: DISTANCE_MATRIX[i][j]
 
-The DESIRE of moving from city i to city j is (pij**ALPHA) * (cij**BETHA)
+The DESIRE of moving from city i to city j is (pij**ALPHA) * (cij**BETA)
 
 Let 
 
-S = SUM[ (pim**ALPHA) * (cim**BETHA) ], for all m-city allowed
+S = SUM[ (pim**ALPHA) * (cim**BETA) ], for all m-city allowed
 
 be the sum of desires of moving from city i to all *allowed* cities
 
@@ -27,7 +28,7 @@ P = DESIRE/ S
 """
 
 ALPHA = 1  # definied empirically
-BETHA = 2  # definied empirically
+BETA = 2  # definied empirically
 NUM_CITIES = 15
 MAX_ITERATIONS = 1000
 Q = 100  # constant for pheromone formula
@@ -68,7 +69,7 @@ def probability_to_go(start, allowed, pheromone_matrix, DISTANCE_MATRIX):
 
     for city in allowed:
         pij = (pheromone_matrix[start][city]) ** ALPHA
-        cij = (1 / DISTANCE_MATRIX[start][city]) ** BETHA
+        cij = (1 / DISTANCE_MATRIX[start][city]) ** BETA
         desire = pij * cij
         list_probability.append(desire)
         total_desires += desire
@@ -108,50 +109,6 @@ def update_evaporation_pheromone(pheromone_matrix):
 
 
 # Colony of Ants Optimization Algorithm ========================================================================
-"""
-def ant_colony_optimization(MAX_ITERATIONS):
-    best_path = []
-    best_cost = float("inf")
-    for _ in range(MAX_ITERATIONS):
-        current = 0  # start from city 0
-        path = [current]  # Track the ant's path
-        length_route_antk = 0
-
-        while len(path) < NUM_CITIES:
-            # Get probabilities for the current city
-            list_probability = probability_to_go(
-                current, pheromone_matrix, DISTANCE_MATRIX
-            )
-
-            random_num = round(
-                random.uniform(0, 1), 3
-            )  # Generate a random number for city selection
-
-            aux = 0
-            position = 0
-            for p in list_probability:
-                aux += p
-                if random_num <= aux:
-                    # Move to the selected city
-                    path.append(position)
-                    length_route_antk += DISTANCE_MATRIX[current][position]
-                    update_pheromone(
-                        current, position, pheromone_matrix, length_route_antk
-                    )
-                    current = position  # Update current city
-                    break
-                position += 1
-
-        # Update the pheromone evaporation for the next iteration
-        update_evaporation_pheromone(pheromone_matrix)
-
-        # Check if this ant's path is the best found so far
-        if length_route_antk < best_cost:
-            best_cost = length_route_antk
-            best_path = path
-
-    return best_path, best_cost
-"""
 
 
 def ant_colony_optimization(MAX_ITERATIONS):
@@ -208,7 +165,8 @@ def ant_colony_optimization(MAX_ITERATIONS):
 best_path, best_cost, best_cost_history = ant_colony_optimization(MAX_ITERATIONS)
 
 # Results
-print(f"Best Route: {best_path}")
+best_path_as_ints = [int(city) for city in best_path]  # Converte para int
+print(f"Best Route: {best_path_as_ints}")
 print(f"Total Cost: {best_cost}")
 
 # Visualize evolution of cost
